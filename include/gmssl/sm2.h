@@ -272,6 +272,7 @@ int sm2_private_key_info_print(FILE *fp, int fmt, int ind, const char *label, co
 int sm2_private_key_info_to_pem(const SM2_KEY *key, FILE *fp);
 // FIXME: #define default buffer size for sm2_private_key_info_from_pem
 int sm2_private_key_info_from_pem(SM2_KEY *key, FILE *fp);
+int sm2_private_key_info_from_pem_str(SM2_KEY* key, const char* pem_str);
 
 /*
 EncryptedPrivateKeyInfo ::= SEQUENCE {
@@ -284,7 +285,8 @@ _gmssl_export int sm2_private_key_info_decrypt_from_der(SM2_KEY *key, const uint
 	const char *pass, const uint8_t **in, size_t *inlen);
 _gmssl_export int sm2_private_key_info_encrypt_to_pem(const SM2_KEY *key, const char *pass, FILE *fp);
 // FIXME: #define default buffer size
-_gmssl_export int sm2_private_key_info_decrypt_from_pem(SM2_KEY *key, const char *pass, FILE *fp);
+_gmssl_export int sm2_private_key_info_decrypt_from_pem(SM2_KEY* key, const char* pass, FILE* fp);
+_gmssl_export int sm2_private_key_info_decrypt_from_pem_str(SM2_KEY* key, const char* pass, const char *pem_str);
 
 
 typedef struct {

@@ -23,8 +23,8 @@ extern "C" {
 #endif
 
 
-int pem_read(FILE *fp, const char *name, uint8_t *out, size_t *outlen, size_t maxlen);
-int pem_write(FILE *fp, const char *name, const uint8_t *in, size_t inlen);
+	int pem_read(FILE* fp, const char* name, uint8_t* out, size_t* outlen, size_t maxlen);
+	int pem_write(FILE *fp, const char *name, const uint8_t *in, size_t inlen);
 
 
 #ifdef __cplusplus

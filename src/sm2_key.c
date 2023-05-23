@@ -25,6 +25,7 @@
 
 extern const SM2_BN SM2_N;
 
+int base64_decode(unsigned char* inData, unsigned int nInDataLen, unsigned char** outData, unsigned int* puiOutLen);
 
 int sm2_key_generate(SM2_KEY *key)
 {
@@ -410,6 +411,31 @@ int sm2_private_key_info_from_pem(SM2_KEY *sm2_key, FILE *fp)
 	}
 	return 1;
 }
+int sm2_private_key_info_from_pem_str(SM2_KEY* key, const char* pem_str)
+{
+	uint8_t buf[512];
+	const uint8_t* cp = buf;
+	size_t len;
+	const uint8_t* attrs;
+	size_t attrs_len;
+	uint8_t* pB64Out = NULL;
+	size_t nB64OutLen = 0;
+
+	base64_decode(pem_str, strlen(pem_str), &pB64Out, &nB64OutLen);
+	memcpy(buf, pB64Out, nB64OutLen);
+	len = nB64OutLen;
+	free(pB64Out);
+
+	if (sm2_private_key_info_from_der(key, &attrs, &attrs_len, &cp, &len) != 1
+		|| asn1_length_is_zero(len) != 1) {
+		error_print();
+		return -1;
+	}
+	if (attrs_len) {
+		error_print();
+	}
+	return 1;
+}
 #endif
 
 int sm2_public_key_info_to_der(const SM2_KEY *pub_key, uint8_t **out, size_t *outlen)
@@ -683,6 +709,94 @@ int sm2_private_key_info_decrypt_from_pem(SM2_KEY *key, const char *pass, FILE *
 	}
 	if (pem_read(fp, "ENCRYPTED PRIVATE KEY", buf, &len, sizeof(buf)) != 1
 		|| sm2_private_key_info_decrypt_from_der(key, &attrs, &attrs_len, pass, &cp, &len) != 1
+		|| asn1_length_is_zero(len) != 1) {
+		error_print();
+		return -1;
+	}
+	return 1;
+}
+
+int base64_decode(unsigned char* inData, unsigned int nInDataLen, unsigned char** outData, unsigned int* puiOutLen)
+{
+	int nRet = 0;
+	int blocksize;
+	unsigned char* buffer = NULL;
+	BASE64_CTX ctx;
+	uint8_t* p;
+	int len;
+	if (NULL == inData || !outData || !puiOutLen)
+	{
+		return -1;
+	}
+
+	// base64 密文至少 4 字节
+	if (nInDataLen < 4)
+	{
+		return -1;
+	}
+
+
+	blocksize = nInDataLen * 6 / 8;
+	buffer = (unsigned char*)malloc(blocksize);
+	if (!buffer)
+	{
+		return -1;
+	}
+	memset(buffer, 0, blocksize);
+	p = buffer;
+
+	base64_decode_init(&ctx);
+	/*-
+	 * -1 for error
+	 *  0 for last line
+	 *  1 for full line
+	 */
+	nRet = base64_decode_update(&ctx, inData, nInDataLen, p, &len);
+	if (nRet == -1)
+	{
+		goto err;
+	}
+	p += len;
+
+	nRet = base64_decode_finish(&ctx, p, &len);
+	if (nRet != 1)
+	{
+		goto err;
+	}
+	p += len;
+	len = (int)(p - buffer);
+
+	*outData = buffer;
+	*puiOutLen = len;
+	return 0;
+
+err:
+	free(buffer);
+	return -1;
+}
+
+int sm2_private_key_info_decrypt_from_pem_str(SM2_KEY* key, const char* pass, const char* pem_str)
+{
+	uint8_t buf[512];
+	const uint8_t* cp = buf;
+	size_t len ;
+	const uint8_t* attrs;
+	size_t attrs_len;
+	uint8_t* pB64Out = NULL;
+	size_t nB64OutLen = 0;
+	if (!key || !pass || !pem_str) {
+		error_print();
+		return -1;
+	}
+
+	//pem_str_read(pem_str, "ENCRYPTED PRIVATE KEY", buf, &len, sizeof(buf));
+	
+	base64_decode(pem_str, strlen(pem_str), &pB64Out, &nB64OutLen);
+	memcpy(buf, pB64Out, nB64OutLen);
+	len = nB64OutLen;
+	free(pB64Out);
+
+	if (sm2_private_key_info_decrypt_from_der(key, &attrs, &attrs_len, pass, &cp, &len) != 1
 		|| asn1_length_is_zero(len) != 1) {
 		error_print();
 		return -1;
